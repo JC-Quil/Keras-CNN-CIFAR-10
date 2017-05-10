@@ -1,4 +1,4 @@
-#CIFAR-10 Object Recognition using deep neural network
+# CIFAR-10 Object Recognition using deep neural network
 
 ### Objective
 The objective is to recognize object within 10 different classes from
