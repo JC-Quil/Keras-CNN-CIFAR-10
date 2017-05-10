@@ -5,6 +5,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Dropout
 from keras.layers import Flatten
+from keras.constraints import maxnorm
 from keras.wrappers.scikit_learn import KerasClassifier
 from keras.layers.convolutional import Conv2D
 from keras.layers.convolutional import MaxPooling2D
@@ -16,7 +17,7 @@ K.set_image_dim_ordering('th')
 
 # fix random seed
 seed = 11
-numpy.random.seed(seed)
+np.random.seed(seed)
 
 
 # load data
@@ -35,35 +36,36 @@ y_train = np_utils.to_categorical(y_train)
 y_test = np_utils.to_categorical(y_test)
 num_classes = y_test.shape[1]
 
+
 # Function to create model
 def create_model(optimizer= 'rmsprop' , init= 'glorot_uniform'):
 	# Create the model
 	model = Sequential()
-	model.add(Conv2D(200, (2, 2), input_shape=(3, 32, 32), padding='same', activation='relu', kernel_constraint=maxnorm(3)))
-	model.add(Conv2D(200, (2, 2), input_shape=(3, 32, 32), padding='same', activation='relu', kernel_constraint=maxnorm(3)))
+	model.add(Conv2D(64, (3, 3), init=init, input_shape=(3, 32, 32), padding='same', activation='relu', kernel_constraint=maxnorm(3)))
+	model.add(Conv2D(64, (3, 3), init=init, input_shape=(3, 32, 32), padding='same', activation='relu', kernel_constraint=maxnorm(3)))
 	model.add(Dropout(0.1))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Conv2D(300, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(3)))
+	model.add(Conv2D(128, (3, 3), init=init, activation='relu', padding='same', kernel_constraint=maxnorm(3)))
 	model.add(Dropout(0.1))
-	model.add(Conv2D(300, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(4)))
+	model.add(Conv2D(128, (3, 3), init=init, activation='relu', padding='same', kernel_constraint=maxnorm(4)))
 	model.add(Dropout(0.2))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Conv2D(600, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(4)))
+	model.add(Conv2D(256, (3, 3), init=init, activation='relu', padding='same', kernel_constraint=maxnorm(4)))
 	model.add(Dropout(0.3))
 	model.add(Flatten())
-	model.add(Dense(600, activation='relu', kernel_constraint=maxnorm(4)))
+	model.add(Dense(1024, init=init, activation='relu', kernel_constraint=maxnorm(4)))
 	model.add(Dropout(0.5))
 	model.add(Dense(num_classes, activation='softmax'))
 	# Compile model
-	model.compile(loss= binary_crossentropy , optimizer=optimizer, metrics=[ accuracy ])
+	model.compile(loss= 'categorical_crossentropy' , optimizer=optimizer, metrics=[ 'accuracy' ])
 	return model
 
 # Create model
 model = KerasClassifier(build_fn=create_model, verbose=0)
 # grid search epochs, batch size and optimizer
 optimizers = [ 'rmsprop' ,  'adam' ]
-epochs = np.array([100, 200])
-batches = np.array([5, 10, 20])
+epochs = np.array([25, 50])
+batches = np.array([50, 100])
 initializers = [ 'glorot_uniform' , 'random_normal' ]
 param_grid = dict(optimizer=optimizers, nb_epoch=epochs, batch_size=batches, init=initializers)
 grid = GridSearchCV(estimator=model, param_grid=param_grid)
@@ -73,4 +75,4 @@ grid_model = grid.fit(X_train, y_train)
 # summarize results
 print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
 for params, mean_score, scores in grid_result.grid_scores_:
-print("%f (%f) with: %r" % (scores.mean(), scores.std(), params))
+	print("%f (%f) with: %r" % (scores.mean(), scores.std(), params))
